@@ -1,0 +1,88 @@
+module Compression_Top
+    #(parameter Q_LENGTH = 800, parameter Q_BITS = 10,
+  parameter LA_LENGTH = 100, parameter LA_BITS = 7,
+  parameter START_COMPRESSING = 10, parameter zero_detector_length = 50, 
+  parameter detector_results_length = 16
+)
+  (
+    input clock, reset, stall, data_in_valid,
+    input [63:0] data_in,
+    output comp_rdy, 
+    output reg dump,
+    output [7:0] valid_bits,
+    output [63:0] data_out    
+  );
+
+  reg [10:0] dist_store, dist_store_next;
+  reg [7:0] len_store, lit_store, len_store_next, lit_store_next;
+  wire [7:0] length, literal;
+  wire [10:0] distance;
+  wire  output_valid;
+  LZ77 lz
+  (
+    clock, reset, stall, data_in,
+    data_in_valid, comp_rdy, 
+    distance, length, literal,
+    output_valid
+  );
+  
+  reg lit_en, dist_en, len_en;
+  Huffman_Top huff_table(
+  clock, lit_en, dist_en, len_en,
+  lit_store, {5'b0, dist_store}, {1'b0, len_store},
+  data_out, valid_bits);
+  
+  reg [1:0] state, state_next;
+  parameter IDLE = 2'd0, OUTPUT_1 = 2'd1, OUTPUT_2 = 2'd2;
+  
+  always@(posedge clock) begin
+    if(!reset) begin
+      state <= IDLE;
+      dist_store <= 0;
+      len_store <= 0;
+      lit_store <= 0;
+    end
+    else begin
+      state <= state_next;
+      dist_store <= dist_store_next;
+      len_store <= len_store_next;
+      lit_store <= lit_store_next;
+    end
+  end
+  
+  always@* begin
+    dist_store_next = dist_store;
+    len_store_next = len_store;
+    lit_store_next = lit_store;
+    if(output_valid) begin
+      dist_store_next = distance;
+      len_store_next = length;
+      lit_store_next = literal;
+    end
+  end
+  
+  always@* begin
+    state_next = state;
+    lit_en = 0;
+    len_en = 0;
+    dist_en = 0;
+    if(state == IDLE && output_valid)
+      state_next = OUTPUT_1;
+    else if(state == OUTPUT_1 && len_store > 2 && !stall)
+      state_next = OUTPUT_2;
+    else if(!stall)
+      state_next = IDLE;
+      
+    if(state == OUTPUT_1 && !stall) begin
+      if(len_store > 2)
+        len_en = 1;
+      else
+        lit_en = 1;
+    end
+    else if(state == OUTPUT_2)
+      dist_en = 1;
+      
+  end
+  
+  
+endmodule

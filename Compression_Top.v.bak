@@ -18,7 +18,12 @@ module Compression_Top
   wire [7:0] length, literal;
   wire [10:0] distance;
   wire  output_valid;
-  LZ77 lz
+  LZ77 
+  #(.Q_LENGTH(Q_LENGTH),.Q_BITS(Q_BITS),
+  .LA_LENGTH(LA_LENGTH), .LA_BITS(LA_BITS), 
+  .START_COMPRESSING(START_COMPRESSING), .zero_detector_length(zero_detector_length), 
+  .detector_results_length(detector_results_length))
+  lz
   (
     clock, reset, stall, data_in,
     data_in_valid, comp_rdy, 

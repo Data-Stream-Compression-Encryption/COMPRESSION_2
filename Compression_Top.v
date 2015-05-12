@@ -8,7 +8,7 @@ module Compression_Top
     input clock, reset, stall, data_in_valid,
     input [63:0] data_in,
     output comp_rdy, 
-    output reg dump,
+    output dump,
     output [7:0] valid_bits,
     output [63:0] data_out    
   );
@@ -28,7 +28,7 @@ module Compression_Top
     clock, reset, stall, data_in,
     data_in_valid, comp_rdy, 
     distance, length, literal,
-    output_valid
+    output_valid, dump
   );
   
   reg lit_en, dist_en, len_en;
